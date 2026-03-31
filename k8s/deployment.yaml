@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: pizza-app-deploy
 spec:
-  replicas: 2  # 3 se hata kar 2 kar diya hai taaki cluster par load kam ho
+  replicas: 2
   selector:
     matchLabels:
       app: pizza-app
@@ -12,12 +12,19 @@ spec:
       labels:
         app: pizza-app
     spec:
+      securityContext:      # --- GLOBAL SECURITY ---
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
       - name: pizza-container
         image: shm235/pizza-app:latest
         ports:
         - containerPort: 80
-        # --- YE SECTION ADD KIYA HAI ---
+        securityContext:    # --- CONTAINER LEVEL SECURITY ---
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         resources:
           requests:
             memory: "64Mi"

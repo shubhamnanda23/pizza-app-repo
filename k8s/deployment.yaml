@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pizza-app-deploy
+spec:
+  replicas: 2  # 3 se hata kar 2 kar diya hai taaki cluster par load kam ho
+  selector:
+    matchLabels:
+      app: pizza-app
+  template:
+    metadata:
+      labels:
+        app: pizza-app
+    spec:
+      containers:
+      - name: pizza-container
+        image: shm235/pizza-app:latest
+        ports:
+        - containerPort: 80
+        # --- YE SECTION ADD KIYA HAI ---
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"

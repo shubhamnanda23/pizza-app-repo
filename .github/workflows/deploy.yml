@@ -1,0 +1,46 @@
+name: End-to-End DevOps Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest # GitHub ka runner VM (Networking start)
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: SonarQube Scan
+      uses: sonarsource/sonarqube-scan-action@master
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+    - name: Run Trivy Vulnerability Scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'shmnan/pizza-app:latest'
+        format: 'table'
+        exit-code: '0' # Industry mein '1' karte hain agar fail karna ho
+        severity: 'CRITICAL,HIGH'
+
+    - name: Build and Push Docker Image
+      run: |
+        docker build -t shmnan/pizza-app:latest .
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        docker push shmnan/pizza-app:latest
+
+    - name: AWS Credentials Setup (Networking with EKS)
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-south-1
+
+    - name: Update EKS Kubeconfig
+      run: aws eks update-kubeconfig --name my-eks-cluster
+
+    - name: Deploy to EKS
+      run: kubectl apply -f k8s/deployment.yaml
